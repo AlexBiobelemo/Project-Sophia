@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">Create a New Snippet</h2>
+                <form method="POST" action="" novalidate>
+                    {{ form.hidden_tag() }}
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else "")) }}
+                            {% for error in form.title.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.language.label(class="form-label") }}
+                            {{ form.language(class="form-select", id="language-select") }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.collection.label(class="form-label") }}
+                        {{ form.collection(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows=3) }}
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            {{ form.code.label(class="form-label") }}
+                            <button class="btn btn-sm btn-outline-secondary mb-1" type="button" id="format-btn">Format Code</button>
+                        </div>
+                        {{ form.code(class="form-control" + (" is-invalid" if form.code.errors else ""), rows=10, id="code-textarea") }}
+                        {% for error in form.code.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.tags.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.tags(class="form-control", id="tags-input") }}
+                            <button class="btn btn-outline-secondary" type="button" id="suggest-tags-btn">Suggest Tags</button>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Get references to all the elements we need
+    const suggestBtn = document.getElementById('suggest-tags-btn');
+    const formatBtn = document.getElementById('format-btn');
+    const codeTextarea = document.getElementById('code-textarea');
+    const tagsInput = document.getElementById('tags-input');
+    const langSelect = document.getElementById('language-select');
+
+    // --- Suggest Tags Logic ---
+    suggestBtn.addEventListener('click', async () => {
+        const code = codeTextarea.value;
+        if (!code) {
+            alert('Please enter some code before suggesting tags.');
+            return;
+        }
+        suggestBtn.disabled = true;
+        suggestBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Suggesting...';
+        try {
+            const response = await fetch("{{ url_for('main.suggest_tags') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            });
+            const data = await response.json();
+            if (data.tags) {
+                tagsInput.value = data.tags;
+            }
+        } catch (error) {
+            console.error('Error fetching tags:', error);
+            alert('Could not fetch tag suggestions.');
+        } finally {
+            suggestBtn.disabled = false;
+            suggestBtn.innerHTML = 'Suggest Tags';
+        }
+    });
+
+    // --- Format Code Logic ---
+    formatBtn.addEventListener('click', () => {
+        const lang = langSelect.value;
+        const code = codeTextarea.value;
+        let parser;
+
+        switch(lang) {
+            case 'javascript': parser = 'babel'; break;
+            case 'typescript': parser = 'typescript'; break;
+            case 'html': parser = 'html'; break;
+            case 'css': parser = 'css'; break;
+            case 'markdown': parser = 'markdown'; break;
+            case 'yaml': parser = 'yaml'; break;
+            case 'php': parser = 'php'; break;
+            case 'ruby': parser = 'ruby'; break;
+            default:
+                alert('Formatting for "' + lang + '" is not supported.');
+                return;
+        }
+
+        try {
+            const formattedCode = prettier.format(code, {
+                parser: parser,
+                plugins: prettierPlugins,
+            });
+            codeTextarea.value = formattedCode;
+        } catch (error) {
+            alert('Could not format code. Please check for syntax errors.');
+            console.error(error);
+        }
+    });
+</script>
+{% endblock %}

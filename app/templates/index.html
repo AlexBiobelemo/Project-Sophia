@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% if current_user.is_anonymous %}
+        <div class="px-4 py-5 my-5 text-center">
+            <h1 class="display-5 fw-bold text-body-emphasis">Sophia</h1>
+            <div class="col-lg-6 mx-auto">
+                <p class="lead mb-4">
+                    Your personal, AI-powered knowledge base. Login to manage your code snippets.
+                </p>
+                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                    <a href="{{ url_for('main.login') }}" class="btn btn-primary btn-lg px-4 gap-3">Login</a>
+                    <a href="{{ url_for('main.register') }}" class="btn btn-outline-secondary btn-lg px-4">Register</a>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <h2 class="mb-4">Your Snippets</h2>
+        {% if snippets and snippets.items %}
+            {% for snippet in snippets.items %}
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between">
+                        {{ snippet.title }}
+                        {% if snippet.collection %}
+                            <small class="text-muted">In: {{ snippet.collection.name }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ snippet.description | striptags | truncate(150) or 'No description provided.' }}</p>
+                        <a href="{{ url_for('main.view_snippet', snippet_id=snippet.id) }}" class="btn btn-primary">View Snippet</a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-5">
+                <h3 class="text-muted">No snippets yet!</h3>
+                <p>Why not create your first one?</p>
+                <a href="{{ url_for('main.create_snippet') }}" class="btn btn-success">Create New Snippet</a>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    {% if snippets and snippets.pages > 1 %}
+        {% with pagination=snippets, endpoint='main.index' %}
+            {% include '_pagination.html' %}
+        {% endwith %}
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2 class="mb-4">Search Results for: <em class="text-body-secondary">"{{ query }}"</em></h2>
+
+    {% if results %}
+        {% for snippet in results %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    {{ snippet.title }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ snippet.description | striptags | truncate(150) or 'No description provided.' }}</p>
+
+                    <a href="{{ url_for('main.view_snippet', snippet_id=snippet.id) }}" class="btn btn-primary">View Snippet</a>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <h3 class="text-muted">No results found.</h3>
+            <p>Try a different search query, or make sure your snippets have been updated recently to generate search data.</p>
+        </div>
+    {% endif %}
+{% endblock %}
