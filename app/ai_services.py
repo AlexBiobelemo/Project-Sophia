@@ -2,6 +2,7 @@
 
 import google.generativeai as genai
 from flask import current_app
+import numpy as np
 
 
 def generate_code_from_prompt(prompt_text):
@@ -22,7 +23,7 @@ def generate_code_from_prompt(prompt_text):
             "top_k": 32,
             "max_output_tokens": 4096,
         }
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash",
+        model = genai.GenerativeModel(model_name="gemini-2.5-flash",
                                       generation_config=generation_config)
         full_prompt = (
             "You are a code generation expert. "
@@ -50,7 +51,7 @@ def explain_code(code_to_explain):
     """
     try:
         genai.configure(api_key=current_app.config['GEMINI_API_KEY'])
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
         prompt = (
             "You are a code explanation expert. Provide a detailed, "
             "line-by-line explanation of the following code. "
@@ -78,7 +79,7 @@ def suggest_tags_for_code(code_to_analyze):
     """
     try:
         genai.configure(api_key=current_app.config['GEMINI_API_KEY'])
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
         prompt = (
             "You are a code analysis expert. Analyze the following code and generate a "
             "comma-separated list of 3 to 5 relevant, lowercase tags. "
@@ -118,3 +119,91 @@ def generate_embedding(text_to_embed, task_type="RETRIEVAL_DOCUMENT"):
         current_app.logger.error(f"Gemini API error (embedding): {e}")
         return None
 
+
+def generate_leetcode_solution(problem_title, problem_description, language):
+    try:
+        genai.configure(api_key=current_app.config['GEMINI_API_KEY'])
+        generation_config = {
+            "temperature": 0.4,
+            "top_p": 1,
+            "top_k": 32,
+            "max_output_tokens": 4096,
+        }
+        model = genai.GenerativeModel(model_name="gemini-2.5-flash",
+                                      generation_config=generation_config)
+        full_prompt = (
+            f"You are an expert LeetCode solution generator. "
+            f"Generate a complete, correct, and efficient solution in {language} for the following LeetCode problem. "
+            f"Provide only the code, without any explanation, preamble, or markdown formatting. "
+            f"Problem Title: {problem_title}\n"
+            f"Problem Description: {problem_description}\n\n"
+            f"SOLUTION ({language}):"
+        )
+        response = model.generate_content(full_prompt)
+        return response.text.strip()
+    except Exception as e:
+        current_app.logger.error(f"Gemini API error (solution generation): {e}")
+        return "Error: Could not generate solution. Please check the API key and server logs."
+
+
+def explain_leetcode_solution(solution_code, problem_title, language):
+    try:
+        genai.configure(api_key=current_app.config['GEMINI_API_KEY'])
+        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+        prompt = (
+            f"You are an expert at explaining LeetCode solutions. "
+            f"Provide a concise but educative explanation for the following {language} solution to the problem '{problem_title}'. "
+            f"Your explanation should cover:\n"
+            f"1.  **Code Explanation**: A clear breakdown of the solution's logic.\n"
+            f"2.  **Pattern Identification**: Identify any common algorithmic patterns or data structures used (e.g., Two Pointers, Dynamic Programming, Hash Map).\n"
+            f"3.  **Time Complexity**: Analyze and state the time complexity of the solution.\n"
+            f"4.  **Space Complexity**: Analyze and state the space complexity of the solution.\n"
+            f"Use Markdown for formatting, including bullet points, code blocks, and bold text. "
+            f"Do not wrap the entire response in a code block.\n\n"
+            f"SOLUTION ({language}):\n"
+            f"```\n{solution_code}\n```"
+        )
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        current_app.logger.error(f"Gemini API error (explanation): {e}")
+        return "Error: Could not generate explanation."
+
+
+def classify_leetcode_solution(solution_code, problem_description):
+    try:
+        genai.configure(api_key=current_app.config['GEMINI_API_KEY'])
+        model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+        prompt = (
+            "You are an expert in LeetCode problem classification. "
+            "Analyze the following problem description and its solution. "
+            "Generate a comma-separated list of 3 to 5 relevant classifications "
+            "(e.g., 'Dynamic Programming', 'Two Pointers', 'BFS', 'Array', 'Hash Table'). "
+            "Do not include any explanation, markdown, or other text. "
+            "Example output: Dynamic Programming,Array,Hash Table\n\n"
+            f"PROBLEM DESCRIPTION:\n{problem_description}\n\n"
+            f"SOLUTION CODE:\n```\n{solution_code}\n```"
+        )
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        current_app.logger.error(f"Gemini API error (classification): {e}")
+        return "Error: Could not classify solution."
+
+
+def cosine_similarity(v1, v2):
+    """
+    Calculates the cosine similarity between two vectors.
+
+    Args:
+        v1 (np.array): The first vector.
+        v2 (np.array): The second vector.
+
+    Returns:
+        float: The cosine similarity between v1 and v2, or 0.0 if a norm is zero.
+    """
+    norm_v1 = np.linalg.norm(v1)
+    norm_v2 = np.linalg.norm(v2)
+    if norm_v1 == 0 or norm_v2 == 0:
+        return 0.0
+    return np.dot(v1, v2) / (norm_v1 * norm_v2)

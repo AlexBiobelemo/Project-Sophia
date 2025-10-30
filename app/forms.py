@@ -7,7 +7,7 @@ from wtforms import (StringField, PasswordField, BooleanField, SubmitField,
 from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Length
 
 from app import db
-from app.models import User
+from app.models import User, LeetcodeProblem
 
 
 class RegistrationForm(FlaskForm):
@@ -81,7 +81,7 @@ class AIGenerationForm(FlaskForm):
     """Form for submitting a prompt to the AI for code generation."""
     prompt = TextAreaField(
         'Describe the code you want to generate',
-        validators=[DataRequired(), Length(min=10, max=500)]
+        validators=[DataRequired(), Length(min=10, max=5000)]
     )
     submit = SubmitField('Generate Code')
 
@@ -90,5 +90,37 @@ class CollectionForm(FlaskForm):
     """Form for creating or renaming a collection."""
     name = StringField('Collection Name', validators=[
                        DataRequired(), Length(min=1, max=100)])
+    parent_collection = SelectField('Parent Collection (Optional)', coerce=int, default=0)
     submit = SubmitField('Create Collection')
 
+
+class LeetcodeProblemForm(FlaskForm):
+    title = StringField('Problem Title', validators=[DataRequired(), Length(min=1, max=255)])
+    description = TextAreaField('Problem Description', validators=[DataRequired()])
+    difficulty = SelectField('Difficulty', choices=[('Easy', 'Easy'), ('Medium', 'Medium'), ('Hard', 'Hard')], validators=[DataRequired()])
+    tags = StringField('Tags (comma-separated)', description='e.g., array, dynamic-programming')
+    leetcode_url = StringField('LeetCode URL', validators=[Length(max=500)])
+    submit = SubmitField('Add Problem')
+
+    def validate_title(self, title):
+        problem = db.session.scalar(sa.select(LeetcodeProblem).where(LeetcodeProblem.title == title.data))
+        if problem is not None:
+            raise ValidationError('A problem with this title already exists.')
+
+
+class GenerateSolutionForm(FlaskForm):
+    problem = SelectField('Select Problem', coerce=int, validators=[DataRequired()])
+    language = SelectField('Solution Language', choices=[('python', 'Python'), ('java', 'Java'), ('cpp', 'C++')], validators=[DataRequired()])
+    submit = SubmitField('Generate Solution')
+
+
+class ApproveSolutionForm(FlaskForm):
+    approve = BooleanField('Approve Solution')
+    submit = SubmitField('Submit Approval')
+
+
+class MoveSnippetForm(FlaskForm):
+    """Form for moving or copying a snippet to a different collection."""
+    target_collection = SelectField('Move to Collection', coerce=int, validators=[DataRequired()])
+    action = SelectField('Action', choices=[('move', 'Move'), ('copy', 'Copy')], validators=[DataRequired()])
+    submit = SubmitField('Perform Action')
