@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2 class="mb-4">My Profile</h2>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>{{ current_user.username }}</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Email:</strong> {{ current_user.email }}</p>
+            <p><strong>Total Points:</strong> <span class="badge bg-info text-dark">{{ current_user.get_total_points() }}</span></p>
+        </div>
+    </div>
+
+    <h3 class="mb-3">My Badges</h3>
+    {% if user_badges %}
+        <div class="row">
+            {% for user_badge in user_badges %}
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            {% if user_badge.badge.image_url %}
+                                <img src="{{ user_badge.badge.image_url }}" alt="{{ user_badge.badge.name }}" class="img-fluid mb-2" style="max-height: 80px;">
+                            {% else %}
+                                <i class="bi bi-award fs-1 text-warning"></i>
+                            {% endif %}
+                            <h5 class="card-title mt-2">{{ user_badge.badge.name }}</h5>
+                            <p class="card-text text-muted">{{ user_badge.badge.description }}</p>
+                            <small class="text-muted">Earned on: {{ user_badge.timestamp.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">You haven't earned any badges yet. Keep contributing to earn some!</p>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+{% endblock %}

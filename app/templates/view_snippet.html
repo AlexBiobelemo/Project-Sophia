@@ -21,6 +21,7 @@
     <div class="mt-4">
         <button id="explain-btn" class="btn btn-info">Explain</button>
         <a href="{{ url_for('main.edit_snippet', snippet_id=snippet.id) }}" class="btn btn-secondary">Edit</a>
+        <a href="{{ url_for('main.move_snippet', snippet_id=snippet.id) }}" class="btn btn-secondary">Move/Copy</a>
         <form action="{{ url_for('main.delete_snippet', snippet_id=snippet.id) }}" method="POST" class="d-inline">
             <input type="submit" value="Delete" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this snippet?');">
         </form>
@@ -115,4 +116,3 @@
     }
 </script>
 {% endblock %}
-

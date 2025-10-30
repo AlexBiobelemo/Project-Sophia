@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Export Snippets</h1>
+    <p>Export all your saved snippets to a single markdown file.</p>
+
+    <button id="download-all-btn" class="btn btn-primary mt-4">Download All Snippets</button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const downloadButton = document.getElementById('download-all-btn');
+
+            downloadButton.addEventListener('click', function() {
+                // Trigger download for all snippets
+                window.location.href = `/export/download`;
+            });
+        });
+    </script>
+{% endblock %}

@@ -15,6 +15,13 @@
                             <div class="invalid-feedback">{{ error }}</div>
                         {% endfor %}
                     </div>
+                    <div class="mb-3">
+                        {{ form.parent_collection.label(class="form-label") }}
+                        {{ form.parent_collection(class="form-select" + (" is-invalid" if form.parent_collection.errors else "")) }}
+                        {% for error in form.parent_collection.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <a href="{{ url_for('main.collections') }}" class="btn btn-secondary">Cancel</a>
                         {{ form.submit(class="btn btn-primary", value="Save Changes") }}

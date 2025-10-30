@@ -33,7 +33,7 @@
                 </li>
                 {% else %}
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('main.collections') }}">My Collections</a>
+                    <a class="nav-link" href="{{ url_for('main.collections') }}">My Solutions</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('main.create_snippet') }}">New Snippet</a>
@@ -43,9 +43,12 @@
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Hi, {{ current_user.username }}!
+                        Hi, {{ current_user.username }}! ({{ current_user.get_total_points() }} pts)
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('main.export_snippets') }}">Export Snippets</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('main.user_profile') }}">My Profile</a></li> {# New link for user profile to display badges #}
+                        <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
                     </ul>
                 </li>

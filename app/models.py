@@ -25,11 +25,18 @@ class User(UserMixin, db.Model):
 
     snippets = db.relationship('Snippet', backref='author', lazy='dynamic')
     collections = db.relationship('Collection', backref='owner', lazy='dynamic')
+    leetcode_problems = db.relationship('LeetcodeProblem', backref='author', lazy='dynamic')
+    leetcode_solutions = db.relationship('LeetcodeSolution', backref='contributor', lazy='dynamic')
+    points = db.relationship('Point', backref='user', lazy='dynamic')
+    badges = db.relationship('UserBadge', backref='user', lazy='dynamic')
 
     __table_args__ = (
         db.Index('ix_user_username', 'username', unique=True),
         db.Index('ix_user_email', 'email', unique=True),
     )
+
+    def get_total_points(self):
+        return sum(point.points for point in self.points)
 
     def set_password(self, password):
         """Hashes and sets the user's password."""
@@ -48,13 +55,17 @@ class Collection(db.Model):
     """Represents a user-defined collection for organizing snippets."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    order = db.Column(db.Integer, default=0) # For custom ordering of collections
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    parent_id = db.Column(db.Integer, db.ForeignKey('collection.id'), nullable=True) # For sub-collections
     snippets = db.relationship('Snippet', backref='collection', lazy='dynamic')
+    children = db.relationship('Collection', backref=db.backref('parent', remote_side=[id]), lazy='dynamic') # For hierarchical collections
 
     __table_args__ = (
         db.Index('ix_collection_timestamp', 'timestamp'),
         db.Index('ix_collection_user_id', 'user_id'),
+        db.Index('ix_collection_parent_id', 'parent_id'),
     )
 
     def __repr__(self):
@@ -93,3 +104,108 @@ class Snippet(db.Model):
     def __repr__(self):
         """String representation of the Snippet object."""
         return f'<Snippet {self.title}>'
+
+
+class Point(db.Model):
+    """Represents points awarded to a user for gamification."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    points = db.Column(db.Integer, nullable=False, default=0)
+    activity = db.Column(db.String(255), nullable=False) # e.g., "Snippet Created", "Solution Approved"
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('ix_point_user_id', 'user_id'),
+        db.Index('ix_point_timestamp', 'timestamp'),
+    )
+
+    def __repr__(self):
+        return f'<Point {self.points} for {self.user.username} ({self.activity})>'
+
+
+class Badge(db.Model):
+    """Represents a badge that can be awarded to users."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(255), nullable=True) # URL to badge icon
+    # Criteria for earning the badge (e.g., 'snippets_created:10', 'solutions_approved:5')
+    criteria = db.Column(db.String(255), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.Index('ix_badge_name', 'name', unique=True),
+    )
+
+    def __repr__(self):
+        return f'<Badge {self.name}>'
+
+
+class UserBadge(db.Model):
+    """Associates users with earned badges."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    badge_id = db.Column(db.Integer, db.ForeignKey('badge.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    badge = db.relationship('Badge', backref='user_badges')
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'badge_id', name='uq_user_badge'),
+        db.Index('ix_user_badge_user_id', 'user_id'),
+        db.Index('ix_user_badge_badge_id', 'badge_id'),
+    )
+
+    def __repr__(self):
+        return f'<User {self.user.username} earned {self.badge.name}>'
+
+
+class LeetcodeProblem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False, unique=True)
+    description = db.Column(db.Text, nullable=False)
+    difficulty = db.Column(db.String(20), nullable=False) # Easy, Medium, Hard
+    tags = db.Column(db.String(255), nullable=True) # e.g., "array, dynamic-programming"
+    leetcode_url = db.Column(db.String(500), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id')) # User who added the problem
+
+    solutions = db.relationship('LeetcodeSolution', backref='problem', lazy='dynamic')
+
+    __table_args__ = (
+        db.Index('ix_leetcode_problem_title', 'title', unique=True),
+        db.Index('ix_leetcode_problem_difficulty', 'difficulty'),
+        db.Index('ix_leetcode_problem_timestamp', 'timestamp'),
+    )
+
+    def __repr__(self):
+        return f'<LeetcodeProblem {self.title}>'
+
+
+class LeetcodeSolution(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    problem_id = db.Column(db.Integer, db.ForeignKey('leetcode_problem.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id')) # User who contributed the solution
+    solution_code = db.Column(db.Text, nullable=False)
+    language = db.Column(db.String(50), nullable=False, default='python')
+    explanation = db.Column(db.Text, nullable=True)
+    classification = db.Column(db.String(255), nullable=True) # e.g., "Dynamic Programming, BFS"
+    approved = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    embedding = db.Column(db.JSON, nullable=True) # For semantic search of solutions
+
+    __table_args__ = (
+        db.Index('ix_leetcode_solution_problem_id', 'problem_id'),
+        db.Index('ix_leetcode_solution_user_id', 'user_id'),
+        db.Index('ix_leetcode_solution_approved', 'approved'),
+        db.Index('ix_leetcode_solution_timestamp', 'timestamp'),
+    )
+
+    def generate_and_set_embedding(self):
+        from app import ai_services
+        text_to_embed = f"Problem: {self.problem.title}\nSolution: {self.solution_code}\nExplanation: {self.explanation}"
+        self.embedding = ai_services.generate_embedding(
+            text_to_embed, task_type="RETRIEVAL_DOCUMENT")
+
+    def __repr__(self):
+        return f'<LeetcodeSolution for {self.problem.title} by {self.contributor.username}>'
